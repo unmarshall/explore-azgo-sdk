@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/unmarshall/explore-azgo-sdk/common"
 )
 
@@ -19,6 +23,13 @@ func main() {
 	common.DieOnError(err, "failed to create clients")
 
 	vm, err := clients.GetVM(context.Background(), resourceGroup, vmName)
+	var respErr *azcore.ResponseError
+	if errors.As(err, &respErr) {
+		if http.StatusNotFound == respErr.StatusCode {
+			fmt.Printf("VM with name %s is not found", vmName)
+			return
+		}
+	}
 	common.DieOnError(err, "failed to get machine")
 	log.Printf("vm: %v", vm.Name)
 	log.Printf("vm: %v", vm.ID)
