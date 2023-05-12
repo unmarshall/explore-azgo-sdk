@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	connectConfig := common.AzureConnectConfigFromEnv()
+	connectConfig := common.GetAzureConnectConfig()
 	common.DieOnError(connectConfig.Validate(), "invalid connect config")
 	clients, err := common.NewClients(connectConfig)
 	common.DieOnError(err, "failed to create clients")
