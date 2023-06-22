@@ -89,14 +89,6 @@ func createVMParameters() armcompute.VirtualMachine {
 			CustomData:    &helloCustomScript,
 			LinuxConfiguration: &armcompute.LinuxConfiguration{
 				DisablePasswordAuthentication: pointer.Bool(true),
-				SSH: &armcompute.SSHConfiguration{
-					PublicKeys: []*armcompute.SSHPublicKey{
-						{
-							KeyData: to.Ptr("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCUG1R7e53Dk7RkTkOSQKSsg5jhHzTKXA1NyZ8Umx1F71epYV3jFhkMEXjRx2IG3u8DEEBmpWsMA3qdFiZ1Hif43mkmJ0sKccFABNZN3crB12bPwYJIBMoX8Jr9Hr6jHEhBgP9uosKSCs9UMUhZh5eYi0b/99Rn6hD9w5zH0r5Oy9YlufxYsxy0DZoZU8G7TNaAyYHmkSOpXmgcHnYl2RBF2vZFIalIgoOUYUj6s1JXfsX2OjRC3EfjYjkd08/GTWbrIPovLLIYTg8h4g2EOIAvubR0Rn+9QlIFxyaxeczqpbqJXw1U0dkdIq5FR9LNfrwHXCfZ9gyncxch6v09wvpM+HGbQkYPnUdXa/eiWggdphSaol3lzPnk4vtiki+nD6r6laZ/Jg+N0tSRcbX6h7p+udmjc6lI8gjNDL/VmjkDoNR1RN0vISq3iP7DlwaBFuGO5xCTqclFu0XVsh1PjtmB3izyCCBlHN/tFztX3T92LqqLR9kk+3o+MR1zsHySzL6puciDTJMXCfRiqKEIRt4tOKFSJX2rSc1hz9lJ5ZwY+h7wSWARNhErzsQfUbIgRRWwSmFDUJ7eRGaXtIy33oAd92wS+xY9qtHP1Fzh8s1zw9q6A6/6mwTNKNDsFmUXOU3a+nbgey2nURDyC2D0Ve+qiwS8T/cStgyCSbsdIRd1CQ=="),
-							Path:    to.Ptr("/home/core/.ssh/authorized_keys"),
-						},
-					},
-				},
 			},
 		},
 		StorageProfile: &armcompute.StorageProfile{
