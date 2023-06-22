@@ -35,7 +35,7 @@ func GetAzureConnectConfig() AzureConnectConfig {
 	config := DefaultAzureConnectConfig()
 	jsonBytes, err := json.Marshal(config)
 	DieOnError(err, "failed to marshal azure connect config")
-	DieOnError(os.WriteFile(configPath, jsonBytes, 644), "failed to write azure connect config to path: "+configPath)
+	DieOnError(os.WriteFile(configPath, jsonBytes, 0666), "failed to write azure connect config to path: "+configPath)
 	return config
 }
 

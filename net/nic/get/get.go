@@ -9,11 +9,11 @@ import (
 
 const (
 	resourceGroup = "shoot--mb-garden--sdktest"
-	vmName        = "shoot--mb-garden--sdktest-worker-blu9f-z1-8f464-bdjrm"
+	vmName        = "shoot--mb-garden--sdktest-worker-bingo"
 )
 
 var (
-	nicName = fmt.Sprintf("%s-nic", vmName)
+	nicName = fmt.Sprintf("%s-nic-alpha", vmName)
 )
 
 func main() {

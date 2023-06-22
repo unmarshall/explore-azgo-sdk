@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/marketplaceordering/armmarketplaceordering"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resourcegraph/armresourcegraph"
@@ -49,6 +49,7 @@ func NewClients(connectConfig AzureConnectConfig) (*Clients, error) {
 	DieOnError(err, "failed to create resource SKU client")
 	clients.ResourceGraphClient, err = createResourceGraphClient(tokenCredential)
 	DieOnError(err, "failed to create resource graph client")
+	clients.DiskClient, err = createDiskClient(connectConfig.SubscriptionID, tokenCredential)
 	return &clients, nil
 }
 
@@ -194,4 +195,12 @@ func createResourceGraphClient(tokenCredential azcore.TokenCredential) (*armreso
 		return nil, err
 	}
 	return factory.NewClient(), nil
+}
+
+func createDiskClient(subscriptionID string, tokenCredential azcore.TokenCredential) (*armcompute.DisksClient, error) {
+	factory, err := armcompute.NewClientFactory(subscriptionID, tokenCredential, nil)
+	if err != nil {
+		return nil, err
+	}
+	return factory.NewDisksClient(), nil
 }

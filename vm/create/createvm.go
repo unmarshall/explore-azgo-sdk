@@ -8,10 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/unmarshall/explore-azgo-sdk/common"
 	"k8s.io/utils/pointer"
 )
@@ -24,36 +25,34 @@ const (
 	product       = "gardenlinux"
 	publisher     = "sap"
 	adminUserName = "core"
-)
-
-var (
-	clients *common.Clients
+	zone          = "1"
 )
 
 func main() {
 	var err error
-	connectConfig := common.AzureConnectConfigFromEnv()
-	common.DieOnError(connectConfig.Validate(), "invalid connect config")
-	clients, err = common.NewClients(connectConfig)
-	common.DieOnError(err, "failed to create clients")
-
-	exists, err := vmExists()
-	common.DieOnError(err, "failed to get vm")
-	fmt.Printf("Vm Exists? %t", exists)
-
-	parameters := createVMParameters()
-
 	ctx := context.Background()
 
+	connectConfig := common.GetAzureConnectConfig()
+	common.DieOnError(connectConfig.Validate(), "invalid connect config")
+	clients, err := common.NewClients(connectConfig)
+	common.DieOnError(err, "failed to create clients")
+
 	vmClient := clients.VirtualMachineClient
+	exists, err := vmExists(ctx, vmClient)
+	common.DieOnError(err, "failed to get vm")
+	fmt.Printf("Vm Exists? %t", exists)
+	parameters := createVMParameters()
+	start := time.Now()
 	pollerResponse, err := vmClient.BeginCreateOrUpdate(ctx, resourceGroup, vmName, parameters, nil)
 	common.DieOnError(err, "failed to make request to create vm")
 	resp, err := pollerResponse.PollUntilDone(ctx, nil)
 	common.DieOnError(err, "polling for vm created failed")
 
 	createdVM := resp.VirtualMachine
-	fmt.Printf("created VM: %v\n", createdVM)
-
+	vmJsonBytes, err := createdVM.MarshalJSON()
+	common.DieOnError(err, "failed to marshal vm json")
+	fmt.Printf("created VM: %s\n", string(vmJsonBytes))
+	fmt.Printf("Total time taken: %fs\n", time.Now().Sub(start).Seconds())
 }
 
 func createVMParameters() armcompute.VirtualMachine {
@@ -66,14 +65,23 @@ func createVMParameters() armcompute.VirtualMachine {
 	vmSize := armcompute.VirtualMachineSizeTypesStandardA4V2
 	helloCustomScript := "IyEvdXNyL2Jpbi9lbnYgYmFzaAoKZWNobyAiaGVsbG8i"
 
+	nicID := "/subscriptions/82b44c79-a5d4-4d74-8ff8-8639e79c1c39/resourceGroups/shoot--mb-garden--sdktest/providers/Microsoft.Network/networkInterfaces/shoot--mb-garden--sdktest-worker-bingo-nic-alpha"
+
 	vmProperties := armcompute.VirtualMachineProperties{
 		HardwareProfile: &armcompute.HardwareProfile{
 			VMSize: &vmSize,
 		},
 		NetworkProfile: &armcompute.NetworkProfile{
-			NetworkAPIVersion:              nil,
-			NetworkInterfaceConfigurations: nil,
-			NetworkInterfaces:              nil,
+			NetworkInterfaces: []*armcompute.NetworkInterfaceReference{
+				{
+					ID: to.Ptr(nicID),
+					Properties: &armcompute.NetworkInterfaceReferenceProperties{
+						//DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
+						DeleteOption: to.Ptr(armcompute.DeleteOptionsDetach),
+						Primary:      to.Ptr(true),
+					},
+				},
+			},
 		},
 		OSProfile: &armcompute.OSProfile{
 			AdminUsername: pointer.String(adminUserName),
@@ -83,13 +91,13 @@ func createVMParameters() armcompute.VirtualMachine {
 				DisablePasswordAuthentication: pointer.Bool(true),
 				SSH: &armcompute.SSHConfiguration{
 					PublicKeys: []*armcompute.SSHPublicKey{
-						createSSHPublicKey(),
+						{
+							KeyData: to.Ptr("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCUG1R7e53Dk7RkTkOSQKSsg5jhHzTKXA1NyZ8Umx1F71epYV3jFhkMEXjRx2IG3u8DEEBmpWsMA3qdFiZ1Hif43mkmJ0sKccFABNZN3crB12bPwYJIBMoX8Jr9Hr6jHEhBgP9uosKSCs9UMUhZh5eYi0b/99Rn6hD9w5zH0r5Oy9YlufxYsxy0DZoZU8G7TNaAyYHmkSOpXmgcHnYl2RBF2vZFIalIgoOUYUj6s1JXfsX2OjRC3EfjYjkd08/GTWbrIPovLLIYTg8h4g2EOIAvubR0Rn+9QlIFxyaxeczqpbqJXw1U0dkdIq5FR9LNfrwHXCfZ9gyncxch6v09wvpM+HGbQkYPnUdXa/eiWggdphSaol3lzPnk4vtiki+nD6r6laZ/Jg+N0tSRcbX6h7p+udmjc6lI8gjNDL/VmjkDoNR1RN0vISq3iP7DlwaBFuGO5xCTqclFu0XVsh1PjtmB3izyCCBlHN/tFztX3T92LqqLR9kk+3o+MR1zsHySzL6puciDTJMXCfRiqKEIRt4tOKFSJX2rSc1hz9lJ5ZwY+h7wSWARNhErzsQfUbIgRRWwSmFDUJ7eRGaXtIy33oAd92wS+xY9qtHP1Fzh8s1zw9q6A6/6mwTNKNDsFmUXOU3a+nbgey2nURDyC2D0Ve+qiwS8T/cStgyCSbsdIRd1CQ=="),
+							Path:    to.Ptr("/home/core/.ssh/authorized_keys"),
+						},
 					},
 				},
 			},
-			RequireGuestProvisionSignal: nil,
-			Secrets:                     nil,
-			WindowsConfiguration:        nil,
 		},
 		StorageProfile: &armcompute.StorageProfile{
 			DataDisks:      createDataDisks(),
@@ -105,26 +113,23 @@ func createVMParameters() armcompute.VirtualMachine {
 				Name: to.Ptr(vmName + "-os-disk"),
 			},
 		},
-		UserData:               nil,
-		VirtualMachineScaleSet: nil,
-		InstanceView:           nil,
-		ProvisioningState:      nil,
-		TimeCreated:            nil,
-		VMID:                   nil,
+	}
+
+	tags := map[string]*string{
+		"Name": to.Ptr(vmName),
+		//"kubernetes.io-role-sdk-test": to.Ptr("1"),
+		"kubernetes.io_arch": to.Ptr("amd64"),
+		//"node.kubernetes.io_role":     to.Ptr("node"),
+		"kubernetes.io-cluster-shoot--mb-garden--sdktest": to.Ptr("1"),
 	}
 
 	return armcompute.VirtualMachine{
-		Location:         pointer.String(location),
-		ExtendedLocation: nil,
-		Identity:         nil,
-		Plan:             &plan,
-		Properties:       &vmProperties,
-		Tags:             nil,
-		Zones:            nil,
-		ID:               nil,
-		Name:             pointer.String(vmName),
-		Resources:        nil,
-		Type:             nil,
+		Location:   pointer.String(location),
+		Plan:       &plan,
+		Properties: &vmProperties,
+		Tags:       tags,
+		Zones:      []*string{to.Ptr(zone)},
+		Name:       pointer.String(vmName),
 	}
 }
 
@@ -176,8 +181,8 @@ func createImageReference() *armcompute.ImageReference {
 	}
 }
 
-func vmExists() (bool, error) {
-	_, err := clients.VirtualMachineClient.Get(context.Background(), resourceGroup, vmName, nil)
+func vmExists(ctx context.Context, client *armcompute.VirtualMachinesClient) (bool, error) {
+	_, err := client.Get(ctx, resourceGroup, vmName, nil)
 	var respErr *azcore.ResponseError
 	if err != nil {
 		if errors.As(err, &respErr) {
